@@ -58,10 +58,30 @@ class DataHandler:
         return ordered_content
 
     def strip_html(self, html):
-        """去除HTML标签"""
+        """去除HTML标签，并特殊处理<br>和<blockquote>"""
+        if not html:
+            return ""
+        
+        # 1. 将 <br>、<br/>、<br /> 等统一替换为 \n
+        html = re.sub(r"<\s*br\s*/?>", "\n", html, flags=re.IGNORECASE)
+        
+        # 2. 将 <blockquote>...</blockquote> 替换为引用格式，例如："> 内容"
+        # 使用非贪婪匹配以支持多个 blockquote
+        html = re.sub(
+            r"<blockquote>(.*?)</blockquote>",
+            lambda m: "---引用---\n" + re.sub(r"\n\s*\n", "\n", m.group(1).strip()) + "\n---☆☆---",
+            html,
+            flags=re.IGNORECASE | re.DOTALL
+        )
+        
+        # 3. 使用 BeautifulSoup 去除其余 HTML 标签
         soup = BeautifulSoup(html, "html.parser")
         text = soup.get_text()
-        return re.sub(r"\n+", "\n", text)
+        
+        # 4. 合并多个连续换行符为单个换行
+        text = "\n" + re.sub(r"\n+", "\n", text)
+        
+        return text
 
     def get_root_url(self, url):
         """获取URL的根域名"""
